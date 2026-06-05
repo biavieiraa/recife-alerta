@@ -12,17 +12,17 @@ struct Controle {
   int b3; int id3;
   int b4; int id4;
   int b5; int id5;
-  int pinoVibracao; 
+  int pinoBuzzer; 
 };
 
-// Mapeamento dos fios e pinos dos motores de vibração 
+// Mapeamento dos pinos (Buzzers nos pinos 11 a 16 conforme o circuito mais recente)
 Controle controles[NUM_JOGADORES] = {
-  { 22, 1, 23, 2, 24, 3, 25, 4, 26, 5,   6 }, // J1
-  { 27, 0, 28, 2, 29, 3, 30, 4, 31, 5,   5 }, // J2
-  { 32, 0, 33, 1, 34, 3, 35, 4, 36, 5,   4 }, // J3
-  { 37, 0, 38, 1, 39, 2, 40, 4, 41, 5,   3 }, // J4
-  { 42, 0, 43, 1, 44, 2, 45, 3, 46, 5,   2 }, // J5
-  { 47, 0, 48, 1, 49, 2, 50, 3, 51, 4,   7 }  // J6 
+  { 22, 1, 23, 2, 24, 3, 25, 4, 26, 5,   11 }, // J1
+  { 27, 0, 28, 2, 29, 3, 30, 4, 31, 5,   12 }, // J2
+  { 32, 0, 33, 1, 34, 3, 35, 4, 36, 5,   13 }, // J3
+  { 37, 0, 38, 1, 39, 2, 40, 4, 41, 5,   14 }, // J4
+  { 42, 0, 43, 1, 44, 2, 45, 3, 46, 5,   15 }, // J5
+  { 47, 0, 48, 1, 49, 2, 50, 3, 51, 4,   16 }  // J6 
 };
 
 // --- VARIÁVEIS DO JOGO ---
@@ -43,8 +43,8 @@ int alvoEscolhido[NUM_JOGADORES];
 bool jaVotou[NUM_JOGADORES];
 
 void mudarFarol(int r, int g, int b);
-void oscilarFarolNoite(); // Nova função para o efeito pisca/oscila da noite
-void vibrarFeedback(int idJogador, int vezes, int tempo); 
+void oscilarFarolNoite(); 
+void vibrarBuzzer(int idJogador, int vezes, int tempo); 
 int checarCliqueControle(int idJogador);
 void checarVitoria();
 void iniciarPartida();
@@ -61,7 +61,7 @@ void setup() {
   pinMode(FAROL_B, OUTPUT);
 
   for (int i = 0; i < NUM_JOGADORES; i++) {
-    pinMode(controles[i].pinoVibracao, OUTPUT);
+    pinMode(controles[i].pinoBuzzer, OUTPUT);
     pinMode(controles[i].b1, INPUT_PULLUP);
     pinMode(controles[i].b2, INPUT_PULLUP);
     pinMode(controles[i].b3, INPUT_PULLUP);
@@ -75,17 +75,16 @@ void setup() {
 
 void loop() {
   if (faseAtual == SORTEIO) {
-    mudarFarol(HIGH, HIGH, LOW); // AMARELO (Vermelho + Verde) -> Distribuição de funções
+    mudarFarol(HIGH, HIGH, LOW); // AMARELO -> Fase de sorteio de papéis
     iniciarPartida();
-    mudarFarol(LOW, LOW, LOW); 
+    mudarFarol(LOW, LOW, LOW); // Apaga após o sorteio
     faseAtual = NOITE;
   } 
   else if (faseAtual == NOITE) {
-    // A cor aqui é controlada de forma oscilante dentro da função acaoNoite()
     acaoNoite();
   } 
   else if (faseAtual == RESOLUCAO_NOITE) {
-    mudarFarol(LOW, LOW, LOW); // Apaga durante o processamento secreto
+    mudarFarol(LOW, LOW, LOW); // Mantém apagado durante a contagem
     resolucaoNoite();
   }
   else if (faseAtual == AMANHECER) {
@@ -93,19 +92,19 @@ void loop() {
     amanhecer();
     checarVitoria();
     
-    // Se ninguém ganhou ainda, roda o dia
+    // Se ninguém ganhou, roda o dia
     if (faseAtual == AMANHECER) {
       Serial.println("O DIA COMECOU! A vila tem 8 minutos para debater...");
       
-      // 8 minutos de debate (Farol apagado)
+      // Delay de debate (Para testar mais rápido, mude 480000UL para 10000UL = 10 segundos)
       delay(480000UL); 
       
       Serial.println("A NOITE CAIU!");
       
-      // Pisca rápido em amarelo/vermelho por 3 segundos para avisar que a noite chegou
+      // Pisca rápido Amarelo e Vermelho antes da noite
       for(int k=0; k<3; k++) {
-        mudarFarol(HIGH, HIGH, LOW); delay(500); // Amarelo
-        mudarFarol(HIGH, LOW, LOW);  delay(500); // Vermelho
+        mudarFarol(HIGH, HIGH, LOW); delay(500); 
+        mudarFarol(HIGH, LOW, LOW);  delay(500); 
       }
       
       faseAtual = NOITE; 
@@ -113,7 +112,7 @@ void loop() {
   }
   else if (faseAtual == VITORIA_ASSASSINO) {
     Serial.println(">>> FIM DE JOGO: VITORIA DO ASSASSINO! <<<");
-    // VERMELHO constante piscando para indicar perigo/vitória do assassino
+    // VERMELHO PISCANDO
     for(int i=0; i<10; i++) {
       mudarFarol(HIGH, LOW, LOW); delay(500); 
       mudarFarol(LOW, LOW, LOW);  delay(500);
@@ -122,7 +121,7 @@ void loop() {
   } 
   else if (faseAtual == VITORIA_INOCENTES) {
     Serial.println(">>> FIM DE JOGO: VITORIA DA VILA (INOCENTES)! <<<");
-    // AZUL constante piscando para indicar ordem/justiça restaurada
+    // AZUL PISCANDO
     for(int i=0; i<10; i++) {
       mudarFarol(LOW, LOW, HIGH); delay(500);   
       mudarFarol(LOW, LOW, LOW);  delay(500);   
@@ -131,7 +130,7 @@ void loop() {
   }
 }
 
-// --- FUNÇÕES AUXILIARES E LÓGICA DO JOGO ---
+// --- FUNÇÕES AUXILIARES ---
 
 void mudarFarol(int r, int g, int b) {
   digitalWrite(FAROL_R, r);
@@ -139,20 +138,19 @@ void mudarFarol(int r, int g, int b) {
   digitalWrite(FAROL_B, b);
 }
 
-// Faz o farol alternar entre Amarelo e Vermelho a cada 1 segundo sem usar delay()
 void oscilarFarolNoite() {
   static unsigned long ultimoTempo = 0;
   static bool estadoAmarelo = true;
   unsigned long tempoAtual = millis();
 
-  if (tempoAtual - ultimoTempo >= 1000) { // Altera a cada 1000ms (1 segundo)
+  if (tempoAtual - ultimoTempo >= 1000) { 
     ultimoTempo = tempoAtual;
     estadoAmarelo = !estadoAmarelo;
     
     if (estadoAmarelo) {
-      mudarFarol(HIGH, HIGH, LOW); // Amarelo
+      mudarFarol(HIGH, HIGH, LOW); // Acende Amarelo
     } else {
-      mudarFarol(HIGH, LOW, LOW);  // Vermelho
+      mudarFarol(HIGH, LOW, LOW);  // Acende Vermelho
     }
   }
 }
@@ -165,7 +163,7 @@ void iniciarPartida() {
   for(int i = 0; i < NUM_JOGADORES; i++) {
     vivo[i] = true;
     papeis[i] = INOCENTE;
-    digitalWrite(controles[i].pinoVibracao, LOW); 
+    noTone(controles[i].pinoBuzzer); 
   }
   
   idAssassino = random(0, NUM_JOGADORES);
@@ -179,20 +177,14 @@ void iniciarPartida() {
   Serial.print("GABARITO -> Assassino: J"); Serial.print(idAssassino + 1);
   Serial.print(" | Detetive: J"); Serial.println(idDetetive + 1);
   
-  // Sorteio de papéis com feedback de vibração
+  // Feedback inicial (O Buzzer vibra consoante a função do jogador)
   for (int i = 0; i < NUM_JOGADORES; i++) { 
-    int pulsosVibracao = 1; 
-    int tempoPulso = 350;
+    int bipes = 1; 
+    if (papeis[i] == ASSASSINO) bipes = 3;  
+    else if (papeis[i] == DETETIVE) bipes = 2; 
     
-    if (papeis[i] == ASSASSINO) {
-      pulsosVibracao = 3;  
-      tempoPulso = 200;
-    }  
-    else if (papeis[i] == DETETIVE) {
-      pulsosVibracao = 2;  
-      tempoPulso = 250;
-    } 
-    vibrarFeedback(i, pulsosVibracao, tempoPulso);
+    vibrarBuzzer(i, bipes, 350);
+    delay(200); // Pausa pequena entre o aviso de cada jogador para não encavalar o som
   }
   delay(1000);
 }
@@ -208,6 +200,7 @@ int checarCliqueControle(int idJogador) {
 
 void acaoNoite() {
   Serial.println("A NOITE CAIU! Todos os jogadores vivos votam agora no escuro...");
+  mudarFarol(HIGH, HIGH, LOW); // Força a começar amarelo imediatamente
   
   int jogadoresVivos = 0;
   for(int i = 0; i < NUM_JOGADORES; i++) {
@@ -218,10 +211,8 @@ void acaoNoite() {
 
   int votosRecebidos = 0;
 
-  // Enquanto todo mundo não votar, o farol fica oscilando entre Vermelho e Amarelo
   while (votosRecebidos < jogadoresVivos) {
-    
-    oscilarFarolNoite(); // <--- CHAMA A OSCILAÇÃO DO FAROL AQUI CONSTANTEMENTE
+    oscilarFarolNoite(); // Fica a piscar enquanto aguarda
     
     for (int i = 0; i < NUM_JOGADORES; i++) {
       if (vivo[i] && !jaVotou[i]) {
@@ -230,10 +221,8 @@ void acaoNoite() {
           alvoEscolhido[i] = alvo;
           jaVotou[i] = true;
           votosRecebidos++;
-          
-          vibrarFeedback(i, 1, 80); // Clique tátil de confirmação
-          
           Serial.print("J"); Serial.print(i + 1); Serial.println(" registrou sua acao secreta.");
+          vibrarBuzzer(i, 1, 80); // Clique sonoro/tátil curto para confirmar o voto
         }
       }
     }
@@ -267,18 +256,17 @@ void resolucaoNoite() {
     }
   }
 
+  // Resposta do Detetive
   if (vivo[idDetetive]) {
     int alvo = alvoEscolhido[idDetetive];
     int chance = random(1, 101); 
-    int numPulsos = 1;
-    
+    int numBipes = 1;
     if (chance <= 75) {
-      numPulsos = (papeis[alvo] == ASSASSINO) ? 3 : 1; 
+      numBipes = (papeis[alvo] == ASSASSINO) ? 3 : 1; 
     } else {
-      numPulsos = (papeis[alvo] == ASSASSINO) ? 1 : 3; 
+      numBipes = (papeis[alvo] == ASSASSINO) ? 1 : 3; 
     }
-    
-    vibrarFeedback(idDetetive, numPulsos, 250); 
+    vibrarBuzzer(idDetetive, numBipes, 300); 
   }
 
   delay(2000); 
@@ -287,25 +275,35 @@ void resolucaoNoite() {
 
 void amanhecer() {
   Serial.println("--- RESULTADO DA NOITE ---");
-  for(int i=0; i<NUM_JOGADORES; i++) if(vivo[i]) digitalWrite(controles[i].pinoVibracao, LOW);
+  for(int i=0; i<NUM_JOGADORES; i++) if(vivo[i]) noTone(controles[i].pinoBuzzer);
   delay(500);
 
+  bool alguemMorreu = false;
+
+  // Verifica quem foi morto pelo Assassino e ativa o motor/buzzer
   if (mortoAssassino != -1) {
     Serial.print("Vitima do Assassino: J"); Serial.println(mortoAssassino + 1);
     vivo[mortoAssassino] = false;
-    
-    digitalWrite(controles[mortoAssassino].pinoVibracao, HIGH); 
-    delay(4000); 
-    digitalWrite(controles[mortoAssassino].pinoVibracao, LOW); 
+    tone(controles[mortoAssassino].pinoBuzzer, 1000); // Liga o buzzer
+    alguemMorreu = true;
   }
 
+  // Verifica quem foi expulso na votação (se não for a mesma pessoa) e ativa o motor/buzzer
   if (mortoVotacao != -1 && mortoVotacao != mortoAssassino) {
     Serial.print("Expulso pela votacao da vila: J"); Serial.println(mortoVotacao + 1);
     vivo[mortoVotacao] = false;
+    tone(controles[mortoVotacao].pinoBuzzer, 1000); // Liga o buzzer
+    alguemMorreu = true;
+  }
+
+  // Se houve mortes, os buzzers das vítimas vibram ininterruptamente por 15 SEGUNDOS
+  if (alguemMorreu) {
+    Serial.println("Os buzzers das vitimas estao a vibrar por 15 segundos!");
+    delay(15000); // Espera 15 segundos
     
-    digitalWrite(controles[mortoVotacao].pinoVibracao, HIGH);
-    delay(4000); 
-    digitalWrite(controles[mortoVotacao].pinoVibracao, LOW);
+    // Desliga os buzzers após os 15 segundos
+    if (mortoAssassino != -1) noTone(controles[mortoAssassino].pinoBuzzer);
+    if (mortoVotacao != -1) noTone(controles[mortoVotacao].pinoBuzzer);
   }
   
   mortoAssassino = -1;
@@ -329,10 +327,13 @@ void checarVitoria() {
   }
 }
 
-void vibrarFeedback(int idJogador, int vezes, int tempo) {
+// Função para tocar o buzzer (Usa tone() para simular bem a vibração e o som no Wokwi)
+void vibrarBuzzer(int idJogador, int vezes, int tempo) {
   if (!vivo[idJogador]) return; 
   for(int i = 0; i < vezes; i++) {
-    digitalWrite(controles[idJogador].pinoVibracao, HIGH); delay(tempo);
-    digitalWrite(controles[idJogador].pinoVibracao, LOW);  delay(tempo);
+    tone(controles[idJogador].pinoBuzzer, 1000); // Frequência de 1000Hz
+    delay(tempo);
+    noTone(controles[idJogador].pinoBuzzer);     // Desliga
+    delay(tempo);
   }
 }
